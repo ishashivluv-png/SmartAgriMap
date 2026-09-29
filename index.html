@@ -186,6 +186,7 @@
             .side-panel {
                 width: 100%;
             }
+
         }
 
     </style>
@@ -235,7 +236,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 
-<!-- Telegram Web App support -->
+<!-- Telegram Web App -->
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -282,7 +283,7 @@
 
     let selectedState = null;
 
-    // English is the DEFAULT language
+    // English is always the default
     let selectedLanguage = "English";
 
     let farmerMarker = null;
@@ -337,7 +338,7 @@
 
 
     // ====================================================
-    // LOAD JSON
+    // LOAD JSON DATA
     // ====================================================
 
     fetch("languageData.json")
@@ -436,7 +437,7 @@
 
         selectedState = state;
 
-        // ALWAYS DEFAULT TO ENGLISH
+        // English is ALWAYS selected by default
         selectedLanguage = "English";
 
 
@@ -451,9 +452,9 @@
         }
 
 
-        // ------------------------------------------------
+        // =================================================
         // FIND TOP 5 LANGUAGES
-        // ------------------------------------------------
+        // =================================================
 
         const topLanguages =
             [...data.languages]
@@ -473,9 +474,9 @@
                 .slice(0, 5);
 
 
-        // ------------------------------------------------
-        // START HTML
-        // ------------------------------------------------
+        // =================================================
+        // BUILD STATE INFORMATION
+        // =================================================
 
         let html = `
 
@@ -531,10 +532,6 @@
 
         `;
 
-
-        // ------------------------------------------------
-        // CREATE TOP 5 BUTTONS
-        // ------------------------------------------------
 
         topLanguages.forEach((item, index) => {
 
@@ -647,9 +644,9 @@
         ).innerHTML = html;
 
 
-        // ------------------------------------------------
+        // =================================================
         // MOVE MAP TO STATE
-        // ------------------------------------------------
+        // =================================================
 
         map.setView(
 
@@ -688,10 +685,6 @@
         selectedLanguage = language;
 
 
-        // ------------------------------------------------
-        // GET TRANSLATED MESSAGE
-        // ------------------------------------------------
-
         const message =
             alertMessages[language] ||
             alertMessages["English"];
@@ -711,9 +704,7 @@
         }
 
 
-        // ------------------------------------------------
-        // REMOVE OLD SELECTION
-        // ------------------------------------------------
+        // Remove previous selection
 
         document
             .querySelectorAll(".language-button")
@@ -726,9 +717,7 @@
             });
 
 
-        // ------------------------------------------------
-        // SELECT ENGLISH
-        // ------------------------------------------------
+        // Select English
 
         if (language === "English") {
 
@@ -751,9 +740,7 @@
         }
 
 
-        // ------------------------------------------------
-        // SELECT OTHER LANGUAGE
-        // ------------------------------------------------
+        // Select another language
 
         document
             .querySelectorAll(".language-button")
@@ -781,6 +768,74 @@
 
 
     // ====================================================
+    // GET AVAILABLE VOICES
+    // ====================================================
+
+    function getAvailableVoices() {
+
+        return window.speechSynthesis
+            .getVoices();
+
+    }
+
+
+    // ====================================================
+    // FIND VOICE FOR LANGUAGE
+    // ====================================================
+
+    function findVoice(languageCode) {
+
+        const voices =
+            getAvailableVoices();
+
+
+        if (!voices || voices.length === 0) {
+
+            return null;
+
+        }
+
+
+        // First try exact match
+        let voice =
+            voices.find(
+                voice =>
+                    voice.lang.toLowerCase() ===
+                    languageCode.toLowerCase()
+            );
+
+
+        if (voice) {
+
+            return voice;
+
+        }
+
+
+        // Then try language only
+        const shortLanguage =
+            languageCode
+                .split("-")[0]
+                .toLowerCase();
+
+
+        voice =
+            voices.find(
+                voice =>
+                    voice.lang
+                        .toLowerCase()
+                        .startsWith(
+                            shortLanguage
+                        )
+            );
+
+
+        return voice || null;
+
+    }
+
+
+    // ====================================================
     // TEXT TO SPEECH
     // ====================================================
 
@@ -798,30 +853,105 @@
             alertMessages["English"];
 
 
+        const languageCode =
+            languageCodes[selectedLanguage] ||
+            "en-IN";
+
+
         // Stop previous speech
 
         window.speechSynthesis.cancel();
 
 
-        const speech =
-            new SpeechSynthesisUtterance(
-                message
+        function startSpeech() {
+
+            const voice =
+                findVoice(languageCode);
+
+
+            // If the required voice is not installed
+
+            if (!voice) {
+
+                alert(
+
+                    "A " +
+                    selectedLanguage +
+                    " voice is not available on this device.\n\n" +
+
+                    "Please install the " +
+                    selectedLanguage +
+                    " text-to-speech voice in your phone settings."
+
+                );
+
+                return;
+
+            }
+
+
+            const speech =
+                new SpeechSynthesisUtterance(
+                    message
+                );
+
+
+            // IMPORTANT:
+            // Use the actual matching voice
+
+            speech.voice = voice;
+
+            speech.lang = voice.lang;
+
+            speech.rate = 0.9;
+
+            speech.pitch = 1;
+
+
+            window.speechSynthesis.speak(
+                speech
             );
 
-
-        speech.lang =
-            languageCodes[selectedLanguage] ||
-            "en-IN";
+        }
 
 
-        speech.rate = 0.9;
+        // Some mobile browsers load voices
+        // asynchronously.
 
-        speech.pitch = 1;
+        let voices =
+            getAvailableVoices();
 
 
-        window.speechSynthesis.speak(
-            speech
-        );
+        if (
+            voices &&
+            voices.length > 0
+        ) {
+
+            startSpeech();
+
+        }
+
+        else {
+
+            window.speechSynthesis.onvoiceschanged =
+                function() {
+
+                    window.speechSynthesis
+                        .onvoiceschanged = null;
+
+                    startSpeech();
+
+                };
+
+
+            // Try again after a short delay
+
+            setTimeout(
+                startSpeech,
+                1000
+            );
+
+        }
 
     }
 
@@ -999,9 +1129,9 @@
             );
 
 
-        // ------------------------------------------------
+        // =================================================
         // FARMER LOCATION
-        // ------------------------------------------------
+        // =================================================
 
         if (
             !isNaN(lat) &&
@@ -1035,9 +1165,9 @@
         }
 
 
-        // ------------------------------------------------
+        // =================================================
         // STATE
-        // ------------------------------------------------
+        // =================================================
 
         if (
             state &&
@@ -1053,4 +1183,5 @@
 </script>
 
 </body>
+
 </html>
