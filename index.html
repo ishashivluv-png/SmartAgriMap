@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SmartAgriMap</title>
+
+    <!-- Leaflet CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f8f4;
+        }
+
+        header {
+            background: #198754;
+            color: white;
+            padding: 18px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            font-size: 15px;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 95px);
+        }
+
+        #map {
+            flex: 1;
+            min-height: 500px;
+        }
+
+        .side-panel {
+            width: 380px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .side-panel h2 {
+            margin-top: 0;
+            color: #198754;
+        }
+
+        .state-name {
+            font-size: 25px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .coordinates {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .language-section-title {
+            margin-top: 20px;
+            margin-bottom: 8px;
+        }
+
+        .language-button {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: 1px solid #198754;
+            background: white;
+            color: #198754;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 15px;
+        }
+
+        .language-button:hover {
+            background: #e8f5e9;
+        }
+
+        .language-button.selected {
+            background: #198754;
+            color: white;
+        }
+
+        .default-language {
+            border: 2px solid #198754;
+        }
+
+        .speaker-count {
+            float: right;
+            font-weight: bold;
+        }
+
+        .default-label {
+            font-size: 12px;
+            margin-left: 5px;
+            font-weight: bold;
+        }
+
+        .alert-box {
+            margin-top: 25px;
+            padding: 16px;
+            border-radius: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+        }
+
+        .alert-box h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        #alertMessage {
+            font-size: 17px;
+            line-height: 1.5;
+            font-weight: bold;
+        }
+
+        .voice-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .voice-button {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .listen {
+            background: #198754;
+            color: white;
+        }
+
+        .stop {
+            background: #dc3545;
+            color: white;
+        }
+
+        .instruction {
+            margin-top: 20px;
+            padding: 12px;
+            background: #eef7ff;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        @media (max-width: 800px) {
+
+            .main-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            #map {
+                height: 500px;
+            }
+
+            .side-panel {
+                width: 100%;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<header>
+
+    <h1>🌱 SmartAgriMap</h1>
+
+    <p>
+        State-wise Language & Speaker Map of India
+    </p>
+
+</header>
+
+
+<div class="main-container">
+
+    <!-- MAP -->
+    <div id="map"></div>
+
+
+    <!-- INFORMATION PANEL -->
+    <div class="side-panel">
+
+        <h2>📍 State Information</h2>
+
+        <div id="stateInfo">
+
+            <p>
+                Click on a state marker to view information.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Leaflet JS -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<!-- Telegram Web App support -->
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+
+<script>
+
+    // ====================================================
+    // TELEGRAM WEB APP
+    // ====================================================
+
+    if (window.Telegram && Telegram.WebApp) {
+
+        Telegram.WebApp.ready();
+
+        Telegram.WebApp.expand();
+
+    }
+
+
+    // ====================================================
+    // CREATE MAP
+    // ====================================================
+
+    const map = L.map("map").setView(
+        [22.5, 80],
+        5
+    );
+
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution:
+                "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(map);
+
+
+    // ====================================================
+    // VARIABLES
+    // ====================================================
+
+    let languageData = {};
+
+    let selectedState = null;
+
+    // English is the DEFAULT language
+    let selectedLanguage = "English";
+
+    let farmerMarker = null;
+
+
+    // ====================================================
+    // IRRIGATION ALERT TRANSLATIONS
+    // ====================================================
+
+    const alertMessages = {
+
+        "English":
+            "Irrigation is needed. Please approve irrigation.",
+
+        "Tamil":
+            "பாசனம் தேவைப்படுகிறது. தயவுசெய்து பாசனத்தை அனுமதிக்கவும்.",
+
+        "Telugu":
+            "నీటిపారుదల అవసరం ఉంది. దయచేసి నీటిపారుదలను ఆమోదించండి.",
+
+        "Kannada":
+            "ನೀರಾವರಿ ಅಗತ್ಯವಿದೆ. ದಯವಿಟ್ಟು ನೀರಾವರಿಯನ್ನು ಅನುಮೋದಿಸಿ.",
+
+        "Malayalam":
+            "ജലസേചനം ആവശ്യമാണ്. ദയവായി ജലസേചനം അംഗീകരിക്കുക.",
+
+        "Urdu":
+            "آبپاشی کی ضرورت ہے۔ براہ کرم آبپاشی کی منظوری دیں."
+
+    };
+
+
+    // ====================================================
+    // TEXT-TO-SPEECH LANGUAGE CODES
+    // ====================================================
+
+    const languageCodes = {
+
+        "English": "en-IN",
+
+        "Tamil": "ta-IN",
+
+        "Telugu": "te-IN",
+
+        "Kannada": "kn-IN",
+
+        "Malayalam": "ml-IN",
+
+        "Urdu": "ur-IN"
+
+    };
+
+
+    // ====================================================
+    // LOAD JSON
+    // ====================================================
+
+    fetch("languageData.json")
+
+        .then(response => {
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Could not load languageData.json"
+                );
+
+            }
+
+            return response.json();
+
+        })
+
+        .then(data => {
+
+            languageData = data;
+
+            createStateMarkers();
+
+            openStateFromURL();
+
+        })
+
+        .catch(error => {
+
+            console.error(error);
+
+            document.getElementById(
+                "stateInfo"
+            ).innerHTML = `
+
+                <p style="color:red;">
+                    Error loading languageData.json
+                </p>
+
+            `;
+
+        });
+
+
+    // ====================================================
+    // CREATE STATE MARKERS
+    // ====================================================
+
+    function createStateMarkers() {
+
+        Object.keys(languageData).forEach(state => {
+
+            const stateData =
+                languageData[state];
+
+
+            if (
+                stateData.latitude === undefined ||
+                stateData.longitude === undefined
+            ) {
+
+                return;
+
+            }
+
+
+            const marker = L.marker([
+
+                stateData.latitude,
+
+                stateData.longitude
+
+            ]).addTo(map);
+
+
+            marker.bindTooltip(state);
+
+
+            marker.on("click", function() {
+
+                showState(state);
+
+            });
+
+        });
+
+    }
+
+
+    // ====================================================
+    // SHOW STATE
+    // ====================================================
+
+    function showState(state) {
+
+        selectedState = state;
+
+        // ALWAYS DEFAULT TO ENGLISH
+        selectedLanguage = "English";
+
+
+        const data =
+            languageData[state];
+
+
+        if (!data) {
+
+            return;
+
+        }
+
+
+        // ------------------------------------------------
+        // FIND TOP 5 LANGUAGES
+        // ------------------------------------------------
+
+        const topLanguages =
+            [...data.languages]
+
+                .sort((a, b) => {
+
+                    const countA =
+                        getSpeakerCount(a);
+
+                    const countB =
+                        getSpeakerCount(b);
+
+                    return countB - countA;
+
+                })
+
+                .slice(0, 5);
+
+
+        // ------------------------------------------------
+        // START HTML
+        // ------------------------------------------------
+
+        let html = `
+
+            <div class="state-name">
+                ${state}
+            </div>
+
+            <div class="coordinates">
+
+                Latitude:
+                ${data.latitude}
+
+                <br>
+
+                Longitude:
+                ${data.longitude}
+
+            </div>
+
+
+            <!-- DEFAULT LANGUAGE -->
+
+            <h3 class="language-section-title">
+                🌐 Default Language
+            </h3>
+
+
+            <button
+                class="language-button default-language selected"
+                id="englishButton"
+                onclick="selectLanguage('English')"
+            >
+
+                🇬🇧 <strong>English</strong>
+
+                <span class="default-label">
+                    (Default)
+                </span>
+
+            </button>
+
+
+            <!-- TOP 5 LANGUAGES -->
+
+            <h3 class="language-section-title">
+
+                🗣️ Top 5 Languages
+
+            </h3>
+
+
+            <div class="language-list">
+
+        `;
+
+
+        // ------------------------------------------------
+        // CREATE TOP 5 BUTTONS
+        // ------------------------------------------------
+
+        topLanguages.forEach((item, index) => {
+
+            const languageName =
+                getLanguageName(item);
+
+
+            const speakerCount =
+                getSpeakerCount(item);
+
+
+            html += `
+
+                <button
+                    class="language-button"
+                    data-language="${escapeQuotes(languageName)}"
+                    onclick="selectLanguageFromButton(this)"
+                >
+
+                    <strong>
+                        ${index + 1}.
+                        ${languageName}
+                    </strong>
+
+                    <span class="speaker-count">
+
+                        ${formatNumber(speakerCount)}
+
+                    </span>
+
+                </button>
+
+            `;
+
+        });
+
+
+        html += `
+
+            </div>
+
+
+            <!-- IRRIGATION ALERT -->
+
+            <div class="alert-box">
+
+                <h3>
+                    🚜 Irrigation Alert
+                </h3>
+
+
+                <p id="alertMessage">
+
+                    ${alertMessages["English"]}
+
+                </p>
+
+
+                <div class="voice-buttons">
+
+                    <button
+                        class="voice-button listen"
+                        onclick="speakAlert()"
+                    >
+                        🔊 Listen
+                    </button>
+
+
+                    <button
+                        class="voice-button stop"
+                        onclick="stopSpeech()"
+                    >
+                        ⏹ Stop
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- INSTRUCTIONS -->
+
+            <div class="instruction">
+
+                <strong>
+                    How it works:
+                </strong>
+
+                <br><br>
+
+                1. English is selected by default.
+                <br>
+
+                2. Choose one of the Top 5 languages.
+                <br>
+
+                3. The irrigation alert changes
+                to the selected language.
+                <br>
+
+                4. Press 🔊 Listen to hear the alert.
+
+            </div>
+
+        `;
+
+
+        document.getElementById(
+            "stateInfo"
+        ).innerHTML = html;
+
+
+        // ------------------------------------------------
+        // MOVE MAP TO STATE
+        // ------------------------------------------------
+
+        map.setView(
+
+            [
+                data.latitude,
+                data.longitude
+            ],
+
+            7
+
+        );
+
+    }
+
+
+    // ====================================================
+    // SELECT LANGUAGE FROM BUTTON
+    // ====================================================
+
+    function selectLanguageFromButton(button) {
+
+        const language =
+            button.getAttribute("data-language");
+
+        selectLanguage(language);
+
+    }
+
+
+    // ====================================================
+    // SELECT LANGUAGE
+    // ====================================================
+
+    function selectLanguage(language) {
+
+        selectedLanguage = language;
+
+
+        // ------------------------------------------------
+        // GET TRANSLATED MESSAGE
+        // ------------------------------------------------
+
+        const message =
+            alertMessages[language] ||
+            alertMessages["English"];
+
+
+        const alertElement =
+            document.getElementById(
+                "alertMessage"
+            );
+
+
+        if (alertElement) {
+
+            alertElement.textContent =
+                message;
+
+        }
+
+
+        // ------------------------------------------------
+        // REMOVE OLD SELECTION
+        // ------------------------------------------------
+
+        document
+            .querySelectorAll(".language-button")
+            .forEach(button => {
+
+                button.classList.remove(
+                    "selected"
+                );
+
+            });
+
+
+        // ------------------------------------------------
+        // SELECT ENGLISH
+        // ------------------------------------------------
+
+        if (language === "English") {
+
+            const englishButton =
+                document.getElementById(
+                    "englishButton"
+                );
+
+
+            if (englishButton) {
+
+                englishButton.classList.add(
+                    "selected"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        // ------------------------------------------------
+        // SELECT OTHER LANGUAGE
+        // ------------------------------------------------
+
+        document
+            .querySelectorAll(".language-button")
+            .forEach(button => {
+
+                const buttonLanguage =
+                    button.getAttribute(
+                        "data-language"
+                    );
+
+
+                if (
+                    buttonLanguage === language
+                ) {
+
+                    button.classList.add(
+                        "selected"
+                    );
+
+                }
+
+            });
+
+    }
+
+
+    // ====================================================
+    // TEXT TO SPEECH
+    // ====================================================
+
+    function speakAlert() {
+
+        if (!selectedLanguage) {
+
+            selectedLanguage = "English";
+
+        }
+
+
+        const message =
+            alertMessages[selectedLanguage] ||
+            alertMessages["English"];
+
+
+        // Stop previous speech
+
+        window.speechSynthesis.cancel();
+
+
+        const speech =
+            new SpeechSynthesisUtterance(
+                message
+            );
+
+
+        speech.lang =
+            languageCodes[selectedLanguage] ||
+            "en-IN";
+
+
+        speech.rate = 0.9;
+
+        speech.pitch = 1;
+
+
+        window.speechSynthesis.speak(
+            speech
+        );
+
+    }
+
+
+    // ====================================================
+    // STOP SPEECH
+    // ====================================================
+
+    function stopSpeech() {
+
+        window.speechSynthesis.cancel();
+
+    }
+
+
+    // ====================================================
+    // GET LANGUAGE NAME
+    // ====================================================
+
+    function getLanguageName(item) {
+
+        if (typeof item === "string") {
+
+            return item;
+
+        }
+
+
+        return (
+
+            item.language ||
+
+            item.name ||
+
+            item.Language ||
+
+            "Unknown"
+
+        );
+
+    }
+
+
+    // ====================================================
+    // GET SPEAKER COUNT
+    // ====================================================
+
+    function getSpeakerCount(item) {
+
+        if (typeof item === "string") {
+
+            return 0;
+
+        }
+
+
+        const possibleValues = [
+
+            item.speakers,
+
+            item.Speakers,
+
+            item.speaker_count,
+
+            item["Speaker Count"],
+
+            item.count,
+
+            item.Count
+
+        ];
+
+
+        for (
+            const value of possibleValues
+        ) {
+
+            if (
+                value !== undefined &&
+                value !== null
+            ) {
+
+                const number =
+                    Number(
+                        String(value)
+                            .replace(/,/g, "")
+                    );
+
+
+                if (!isNaN(number)) {
+
+                    return number;
+
+                }
+
+            }
+
+        }
+
+
+        return 0;
+
+    }
+
+
+    // ====================================================
+    // FORMAT NUMBER
+    // ====================================================
+
+    function formatNumber(number) {
+
+        if (
+            number === undefined ||
+            number === null ||
+            isNaN(number)
+        ) {
+
+            return "N/A";
+
+        }
+
+
+        return Number(number)
+            .toLocaleString("en-IN");
+
+    }
+
+
+    // ====================================================
+    // ESCAPE QUOTES
+    // ====================================================
+
+    function escapeQuotes(text) {
+
+        return String(text)
+
+            .replace(
+                /\\/g,
+                "\\\\"
+            )
+
+            .replace(
+                /'/g,
+                "\\'"
+            );
+
+    }
+
+
+    // ====================================================
+    // OPEN STATE / FARMER LOCATION FROM URL
+    // ====================================================
+
+    function openStateFromURL() {
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        const state =
+            params.get("state");
+
+
+        const lat =
+            parseFloat(
+                params.get("lat")
+            );
+
+
+        const lng =
+            parseFloat(
+                params.get("lng")
+            );
+
+
+        // ------------------------------------------------
+        // FARMER LOCATION
+        // ------------------------------------------------
+
+        if (
+            !isNaN(lat) &&
+            !isNaN(lng)
+        ) {
+
+            map.setView(
+
+                [lat, lng],
+
+                12
+
+            );
+
+
+            farmerMarker =
+                L.marker(
+
+                    [lat, lng]
+
+                )
+
+                    .addTo(map)
+
+                    .bindPopup(
+                        "🚜 Farmer's Location"
+                    )
+
+                    .openPopup();
+
+        }
+
+
+        // ------------------------------------------------
+        // STATE
+        // ------------------------------------------------
+
+        if (
+            state &&
+            languageData[state]
+        ) {
+
+            showState(state);
+
+        }
+
+    }
+
+</script>
+
+</body>
+</html>
