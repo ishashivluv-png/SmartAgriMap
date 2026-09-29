@@ -7,6 +7,7 @@
 
     <title>SmartAgriMap</title>
 
+    <!-- Leaflet CSS -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -108,7 +109,11 @@
             font-weight: bold;
         }
 
-        .default-text {
+        .english-button {
+            margin-top: 10px;
+        }
+
+        .english-label {
             font-size: 12px;
             font-weight: bold;
             margin-left: 5px;
@@ -210,8 +215,11 @@
 
 <div class="main-container">
 
+    <!-- MAP -->
     <div id="map"></div>
 
+
+    <!-- SIDE PANEL -->
     <div class="side-panel">
 
         <h2>📍 State Information</h2>
@@ -229,7 +237,12 @@
 </div>
 
 
+<!-- Leaflet JS -->
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<!-- Telegram Web App -->
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -237,7 +250,7 @@
 <script>
 
     // =====================================================
-    // TELEGRAM
+    // TELEGRAM WEB APP
     // =====================================================
 
     if (window.Telegram && Telegram.WebApp) {
@@ -280,7 +293,7 @@
 
 
     // =====================================================
-    // IRRIGATION MESSAGE
+    // IRRIGATION MESSAGES
     // =====================================================
 
     const irrigationMessages = {
@@ -310,7 +323,7 @@
             "সেচের প্রয়োজন রয়েছে। দয়া করে সেচের অনুমতি দিন।",
 
         Marathi:
-            "सिंचनाची गरज आहे. कृपया सिंचनास मंजुरी द्या.",
+            "सिंचनाची गरज आहे. कृपया सिंचनास मंजुरी द्या।",
 
         Gujarati:
             "સિંચાઈની જરૂર છે. કૃપા કરીને સિંચાઈને મંજૂરી આપો.",
@@ -328,7 +341,7 @@
 
 
     // =====================================================
-    // LANGUAGE CODES FOR TEXT TO SPEECH
+    // TEXT-TO-SPEECH LANGUAGE CODES
     // =====================================================
 
     const languageCodes = {
@@ -363,7 +376,7 @@
 
 
     // =====================================================
-    // LOAD LANGUAGE DATA
+    // LOAD JSON
     // =====================================================
 
     fetch("languageData.json")
@@ -423,7 +436,9 @@
                 data.latitude === undefined ||
                 data.longitude === undefined
             ) {
+
                 return;
+
             }
 
             const marker = L.marker([
@@ -452,10 +467,6 @@
 
         selectedState = state;
 
-        // English is always the default
-        selectedLanguage = "English";
-
-
         const data = languageData[state];
 
         if (!data) {
@@ -464,7 +475,7 @@
 
 
         // =================================================
-        // SORT LANGUAGES
+        // FIND TOP 5 LANGUAGES
         // =================================================
 
         const topLanguages =
@@ -479,14 +490,34 @@
 
 
         // =================================================
+        // DEFAULT LANGUAGE
+        // =================================================
+
+        // First Top-5 language is selected initially.
+        // English is option number 6.
+
+        if (topLanguages.length > 0) {
+
+            selectedLanguage =
+                getLanguageName(topLanguages[0]);
+
+        } else {
+
+            selectedLanguage = "English";
+
+        }
+
+
+        // =================================================
         // BUILD HTML
         // =================================================
 
         let html = `
 
             <div class="state-name">
-                ${state}
+                ${escapeHTML(state)}
             </div>
+
 
             <div class="coordinates">
 
@@ -499,28 +530,6 @@
                 ${data.longitude}
 
             </div>
-
-
-            <h3 class="section-title">
-                🌐 Select Language
-            </h3>
-
-
-            <!-- ENGLISH -->
-
-            <button
-                id="englishButton"
-                class="language-button selected"
-                onclick="selectLanguage('English')"
-            >
-
-                🇬🇧 <strong>English</strong>
-
-                <span class="default-text">
-                    (Default)
-                </span>
-
-            </button>
 
 
             <h3 class="section-title">
@@ -543,17 +552,23 @@
                 getSpeakerCount(item);
 
 
+            const isSelected =
+                index === 0;
+
+
             html += `
 
                 <button
-                    class="language-button"
+                    class="language-button ${
+                        isSelected ? "selected" : ""
+                    }"
                     data-language="${escapeHTML(language)}"
                     onclick="selectLanguageFromButton(this)"
                 >
 
                     <strong>
                         ${index + 1}.
-                        ${language}
+                        ${escapeHTML(language)}
                     </strong>
 
                     <span class="speaker-count">
@@ -570,7 +585,32 @@
 
 
         // =================================================
-        // ALERT
+        // ENGLISH AS 6TH OPTION
+        // =================================================
+
+        html += `
+
+            <button
+                id="englishButton"
+                class="language-button english-button"
+                onclick="selectLanguage('English')"
+            >
+
+                <strong>
+                    6. 🇬🇧 English
+                </strong>
+
+                <span class="english-label">
+                    (English)
+                </span>
+
+            </button>
+
+        `;
+
+
+        // =================================================
+        // SELECTED LANGUAGE
         // =================================================
 
         html += `
@@ -578,12 +618,23 @@
             <div class="selected-language">
 
                 Selected language:
+
                 <strong id="selectedLanguageText">
-                    English
+
+                    ${escapeHTML(selectedLanguage)}
+
                 </strong>
 
             </div>
 
+        `;
+
+
+        // =================================================
+        // IRRIGATION ALERT
+        // =================================================
+
+        html += `
 
             <div class="alert-box">
 
@@ -593,7 +644,7 @@
 
                 <p id="alertMessage">
 
-                    ${getMessage("English")}
+                    ${getMessage(selectedLanguage)}
 
                 </p>
 
@@ -604,41 +655,63 @@
                         class="voice-button listen"
                         onclick="speakAlert()"
                     >
+
                         🔊 Listen
+
                     </button>
+
 
                     <button
                         class="voice-button stop"
                         onclick="stopSpeech()"
                     >
+
                         ⏹ Stop
+
                     </button>
 
                 </div>
 
             </div>
 
+        `;
+
+
+        // =================================================
+        // INSTRUCTIONS
+        // =================================================
+
+        html += `
 
             <div class="instruction">
 
-                <strong>How it works:</strong>
+                <strong>
+                    How it works:
+                </strong>
 
                 <br><br>
 
-                🇬🇧 English is always available.
+                1. The state's Top 5 languages
+                are shown first.
 
                 <br>
 
-                🗣️ The state's Top 5 languages
-                are shown below English.
+                2. English is always the
+                6th option.
 
                 <br>
 
-                👆 Select any language.
+                3. Select any one language.
 
                 <br>
 
-                🔊 Press Listen to hear the alert.
+                4. The irrigation message
+                changes to that language.
+
+                <br>
+
+                5. Press 🔊 Listen to hear
+                the selected language.
 
             </div>
 
@@ -650,7 +723,9 @@
         ).innerHTML = html;
 
 
-        // Move map
+        // =================================================
+        // MOVE MAP
+        // =================================================
 
         map.setView(
             [
@@ -664,7 +739,7 @@
 
 
     // =====================================================
-    // SELECT LANGUAGE FROM BUTTON
+    // SELECT LANGUAGE FROM TOP 5 BUTTON
     // =====================================================
 
     function selectLanguageFromButton(button) {
@@ -688,7 +763,7 @@
         selectedLanguage = language;
 
 
-        // Change selected button
+        // Remove old selection
 
         document
             .querySelectorAll(
@@ -703,53 +778,61 @@
             });
 
 
+        // Find selected button
+
+        document
+            .querySelectorAll(
+                ".language-button"
+            )
+            .forEach(button => {
+
+                const buttonLanguage =
+                    button.getAttribute(
+                        "data-language"
+                    );
+
+
+                if (
+                    buttonLanguage === language
+                ) {
+
+                    button.classList.add(
+                        "selected"
+                    );
+
+                }
+
+            });
+
+
+        // English button
+
         if (language === "English") {
 
-            const button =
+            const englishButton =
                 document.getElementById(
                     "englishButton"
                 );
 
-            if (button) {
 
-                button.classList.add(
+            if (englishButton) {
+
+                englishButton.classList.add(
                     "selected"
                 );
 
             }
 
         }
-        else {
-
-            document
-                .querySelectorAll(
-                    ".language-button"
-                )
-                .forEach(button => {
-
-                    if (
-                        button.getAttribute(
-                            "data-language"
-                        ) === language
-                    ) {
-
-                        button.classList.add(
-                            "selected"
-                        );
-
-                    }
-
-                });
-
-        }
 
 
-        // Update selected language text
+        // Update selected language
 
         const selectedText =
             document.getElementById(
                 "selectedLanguageText"
             );
+
 
         if (selectedText) {
 
@@ -759,12 +842,13 @@
         }
 
 
-        // Update alert
+        // Update irrigation message
 
         const alertMessage =
             document.getElementById(
                 "alertMessage"
             );
+
 
         if (alertMessage) {
 
@@ -777,18 +861,10 @@
 
 
     // =====================================================
-    // GET MESSAGE
+    // GET IRRIGATION MESSAGE
     // =====================================================
 
     function getMessage(language) {
-
-        /*
-         * If we have a translation,
-         * use it.
-         *
-         * If not, English is used as a
-         * safe fallback.
-         */
 
         return (
             irrigationMessages[language] ||
@@ -829,18 +905,16 @@
         }
 
 
-        // Stop existing speech
+        // Stop previous audio
 
         window.speechSynthesis.cancel();
 
-
-        // Get voices
 
         let voices =
             window.speechSynthesis.getVoices();
 
 
-        // Find exact voice
+        // Exact language match
 
         let voice =
             voices.find(v =>
@@ -851,31 +925,29 @@
             );
 
 
-        // Find same-language voice
+        // Same language match
 
         if (!voice) {
 
             const shortCode =
                 languageCode
-                .split("-")[0]
-                .toLowerCase();
+                    .split("-")[0]
+                    .toLowerCase();
 
 
             voice =
                 voices.find(v =>
 
                     v.lang
-                    .toLowerCase()
-                    .startsWith(shortCode)
+                        .toLowerCase()
+                        .startsWith(shortCode)
 
                 );
 
         }
 
 
-        // IMPORTANT:
-        // Do NOT silently use English
-        // for another language.
+        // Do not silently speak another language
 
         if (
             language !== "English" &&
@@ -898,8 +970,6 @@
 
         }
 
-
-        // Create speech
 
         const speech =
             new SpeechSynthesisUtterance(
@@ -937,7 +1007,7 @@
 
 
     // =====================================================
-    // STOP AUDIO
+    // STOP SPEECH
     // =====================================================
 
     function stopSpeech() {
@@ -1018,7 +1088,7 @@
                 const number =
                     Number(
                         String(value)
-                        .replace(/,/g, "")
+                            .replace(/,/g, "")
                     );
 
 
@@ -1098,7 +1168,7 @@
 
 
     // =====================================================
-    // URL PARAMETERS
+    // OPEN STATE / FARMER LOCATION FROM URL
     // =====================================================
 
     function openStateFromURL() {
