@@ -1,1241 +1,960 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>SmartAgriMap</title>
 
-    <!-- Leaflet CSS -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
+    />
 
     <style>
-
-        * {
-            box-sizing: border-box;
-        }
-
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #f4f8f4;
+            background: #f4f8f2;
         }
 
         header {
-            background: #198754;
+            background: #2e7d32;
             color: white;
-            padding: 18px;
+            padding: 15px;
             text-align: center;
         }
 
-        header h1 {
+        h1 {
             margin: 0;
-            font-size: 28px;
-        }
-
-        header p {
-            margin: 6px 0 0;
-            font-size: 15px;
-        }
-
-        .main-container {
-            display: flex;
-            height: calc(100vh - 95px);
+            font-size: 24px;
         }
 
         #map {
-            flex: 1;
-            min-height: 500px;
+            width: 100%;
+            height: 55vh;
         }
 
-        .side-panel {
-            width: 390px;
+        .panel {
             background: white;
-            padding: 20px;
-            overflow-y: auto;
-            box-shadow: -2px 0 8px rgba(0,0,0,0.15);
+            margin: 10px;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        .side-panel h2 {
+        .panel h2 {
             margin-top: 0;
-            color: #198754;
+            color: #2e7d32;
         }
 
-        .state-name {
-            font-size: 25px;
-            font-weight: bold;
-            margin-bottom: 8px;
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 5px;
+            background: #2e7d32;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
         }
 
-        .coordinates {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 18px;
-        }
-
-        .section-title {
-            margin-top: 20px;
-            margin-bottom: 8px;
+        button:hover {
+            background: #1b5e20;
         }
 
         .language-button {
+            display: block;
             width: 100%;
-            padding: 12px;
-            margin: 6px 0;
-            border: 1px solid #198754;
-            background: white;
-            color: #198754;
-            border-radius: 8px;
-            cursor: pointer;
+            margin: 7px 0;
             text-align: left;
-            font-size: 15px;
         }
 
-        .language-button:hover {
-            background: #e8f5e9;
+        .selected {
+            background: #1565c0;
         }
 
-        .language-button.selected {
-            background: #198754;
-            color: white;
-        }
-
-        .speaker-count {
-            float: right;
-            font-weight: bold;
-        }
-
-        .english-button {
-            margin-top: 10px;
-        }
-
-        .english-label {
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        .alert-box {
-            margin-top: 25px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-        }
-
-        .alert-box h3 {
-            margin-top: 0;
-            color: #856404;
-        }
-
-        #alertMessage {
-            font-size: 17px;
-            line-height: 1.5;
-            font-weight: bold;
-        }
-
-        .voice-buttons {
-            display: flex;
+        .sensor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
-            margin-top: 12px;
         }
 
-        .voice-button {
-            flex: 1;
-            padding: 11px;
-            border: none;
-            border-radius: 7px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .listen {
-            background: #198754;
-            color: white;
-        }
-
-        .stop {
-            background: #dc3545;
-            color: white;
-        }
-
-        .instruction {
-            margin-top: 20px;
-            padding: 12px;
-            background: #eef7ff;
+        .sensor-card {
+            background: #eef6ec;
+            padding: 10px;
             border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.5;
         }
 
-        .selected-language {
+        .alert {
+            background: #fff3cd;
+            border-left: 5px solid #ff9800;
+            padding: 12px;
             margin-top: 10px;
-            font-size: 14px;
-            color: #555;
+            border-radius: 6px;
         }
 
-        @media (max-width: 800px) {
-
-            .main-container {
-                flex-direction: column;
-                height: auto;
-            }
-
-            #map {
-                height: 500px;
-            }
-
-            .side-panel {
-                width: 100%;
-            }
-
+        .irrigation {
+            background: #ffebee;
+            border-left: 5px solid #d32f2f;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 6px;
         }
 
+        .success {
+            background: #e8f5e9;
+            border-left: 5px solid #2e7d32;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 6px;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
-
 </head>
-
 
 <body>
 
 <header>
-
     <h1>🌱 SmartAgriMap</h1>
-
-    <p>
-        State-wise Language & Speaker Map of India
-    </p>
-
+    <div>State-wise Language & Speaker Map of India</div>
 </header>
 
+<div id="map"></div>
 
-<div class="main-container">
+<div class="panel">
+    <h2>📍 State Information</h2>
+    <div id="stateInfo">
+        Click a state marker to view information.
+    </div>
+</div>
 
-    <!-- MAP -->
-    <div id="map"></div>
+<div class="panel hidden" id="languagePanel">
+    <h2>🌐 Select Language</h2>
+    <div id="languageList"></div>
+</div>
 
+<div class="panel">
+    <h2>📊 Farm Sensor Information</h2>
 
-    <!-- SIDE PANEL -->
-    <div class="side-panel">
+    <div class="sensor">
 
-        <h2>📍 State Information</h2>
+        <div class="sensor-card">
+            🌱 Soil Moisture:
+            <b id="soil">--</b> %
+        </div>
 
-        <div id="stateInfo">
+        <div class="sensor-card">
+            🌡 Temperature:
+            <b id="temperature">--</b> °C
+        </div>
 
-            <p>
-                Click a state marker to view information.
-            </p>
+        <div class="sensor-card">
+            💧 Humidity:
+            <b id="humidity">--</b> %
+        </div>
 
+        <div class="sensor-card">
+            🚰 Water Level:
+            <b id="water">--</b> %
+        </div>
+
+        <div class="sensor-card">
+            🔌 Pump:
+            <b id="pump">--</b>
+        </div>
+
+        <div class="sensor-card">
+            🌧 Rain Probability:
+            <b id="rain">--</b> %
         </div>
 
     </div>
 
+    <div id="alertBox"></div>
+
+    <button id="approveButton"
+            class="hidden"
+            onclick="approveIrrigation()">
+        ✅ Approve Irrigation
+    </button>
+
+    <div id="status"></div>
+
+    <audio id="ttsAudio" controls class="hidden"></audio>
 </div>
-
-
-<!-- Leaflet JS -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-
-<!-- Telegram Web App -->
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-
 <script>
+/*
+=========================================================
+CONFIGURATION
+=========================================================
+*/
 
-    // =====================================================
-    // TELEGRAM WEB APP
-    // =====================================================
+// Your GitHub Pages website
+const MAP_URL =
+    "https://ishashivluv-png.github.io/SmartAgriMap/";
 
-    if (window.Telegram && Telegram.WebApp) {
+/*
+IMPORTANT:
 
-        Telegram.WebApp.ready();
+Replace this with your PUBLIC HTTPS Flask URL.
 
-        Telegram.WebApp.expand();
+Example:
 
+const BACKEND_URL =
+    "https://xxxxx.trycloudflare.com";
+
+Do NOT put:
+http://10.222.230.60:5000
+
+That is your private laptop IP and cannot be reached
+from GitHub Pages over the Internet.
+*/
+
+const BACKEND_URL = "";
+
+
+/*
+=========================================================
+GET TELEGRAM CHAT ID
+=========================================================
+*/
+
+const params = new URLSearchParams(window.location.search);
+
+let chatId = params.get("chat_id");
+
+if (!chatId && window.Telegram && Telegram.WebApp) {
+    Telegram.WebApp.ready();
+
+    if (Telegram.WebApp.initDataUnsafe &&
+        Telegram.WebApp.initDataUnsafe.user) {
+
+        chatId =
+            Telegram.WebApp.initDataUnsafe.user.id;
+    }
+}
+/*
+=========================================================
+MAP
+=========================================================
+*/
+
+const map = L.map("map").setView([22.5, 80.0], 5);
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 18,
+        attribution: "&copy; OpenStreetMap"
+    }
+).addTo(map);
+
+
+/*
+=========================================================
+LANGUAGE DATA
+=========================================================
+*/
+
+let languageData = {};
+
+let selectedState = null;
+let selectedLanguage = "English";
+
+
+/*
+=========================================================
+TRANSLATIONS
+=========================================================
+*/
+
+const translations = {
+
+    English: {
+        irrigation: "Irrigation is needed. Please approve irrigation.",
+        irrigationRequired: "Irrigation required",
+        rainPostpone:
+            "Rain probability is 50% or above. You can postpone irrigation.",
+        approve: "Approve Irrigation",
+        approved: "Irrigation approved.",
+        pumpOn: "Pump ON",
+        pumpOff: "Pump OFF",
+        soil: "Soil Moisture",
+        temperature: "Temperature",
+        humidity: "Humidity",
+        water: "Water Level",
+        rain: "Rain Probability"
+    },
+
+    Hindi: {
+        irrigation: "सिंचाई की आवश्यकता है। कृपया सिंचाई को मंजूरी दें।",
+        irrigationRequired: "सिंचाई आवश्यक है",
+        rainPostpone:
+            "बारिश की संभावना 50% या उससे अधिक है। आप सिंचाई को स्थगित कर सकते हैं।",
+        approve: "सिंचाई की मंजूरी दें",
+        approved: "सिंचाई को मंजूरी दी गई।",
+        pumpOn: "पंप चालू",
+        pumpOff: "पंप बंद",
+        soil: "मिट्टी की नमी",
+        temperature: "तापमान",
+        humidity: "आर्द्रता",
+        water: "जल स्तर",
+        rain: "बारिश की संभावना"
+    },
+
+    Tamil: {
+        irrigation: "நீர்ப்பாசனம் தேவைப்படுகிறது. நீர்ப்பாசனத்தை அனுமதிக்கவும்.",
+        irrigationRequired: "நீர்ப்பாசனம் தேவை",
+        rainPostpone:
+            "மழை பெய்யும் வாய்ப்பு 50% அல்லது அதற்கு மேல் உள்ளது. நீர்ப்பாசனத்தை ஒத்திவைக்கலாம்.",
+        approve: "நீர்ப்பாசனத்தை அனுமதிக்கவும்",
+        approved: "நீர்ப்பாசனம் அனுமதிக்கப்பட்டது.",
+        pumpOn: "பம்ப் இயக்கத்தில்",
+        pumpOff: "பம்ப் நிறுத்தப்பட்டது",
+        soil: "மண் ஈரப்பதம்",
+        temperature: "வெப்பநிலை",
+        humidity: "ஈரப்பதம்",
+        water: "நீர் மட்டம்",
+        rain: "மழை வாய்ப்பு"
+    },
+
+    Telugu: {
+        irrigation: "నీటిపారుదల అవసరం. దయచేసి నీటిపారుదలను అనుమతించండి.",
+        irrigationRequired: "నీటిపారుదల అవసరం",
+        rainPostpone:
+            "వర్షం వచ్చే అవకాశం 50% లేదా అంతకంటే ఎక్కువ ఉంది. నీటిపారుదలను వాయిదా వేయవచ్చు.",
+        approve: "నీటిపారుదలను అనుమతించండి",
+        approved: "నీటిపారుదల అనుమతించబడింది.",
+        pumpOn: "పంప్ ఆన్",
+        pumpOff: "పంప్ ఆఫ్",
+        soil: "నేల తేమ",
+        temperature: "ఉష్ణోగ్రత",
+        humidity: "తేమ",
+        water: "నీటి స్థాయి",
+        rain: "వర్షం అవకాశం"
+    },
+
+    Kannada: {
+        irrigation: "ನೀರಾವರಿ ಅಗತ್ಯವಿದೆ. ದಯವಿಟ್ಟು ನೀರಾವರಿಯನ್ನು ಅನುಮೋದಿಸಿ.",
+        irrigationRequired: "ನೀರಾವರಿ ಅಗತ್ಯವಿದೆ",
+        rainPostpone:
+            "ಮಳೆಯ ಸಾಧ್ಯತೆ 50% ಅಥವಾ ಅದಕ್ಕಿಂತ ಹೆಚ್ಚು ಇದೆ. ನೀರಾವರಿಯನ್ನು ಮುಂದೂಡಬಹುದು.",
+        approve: "ನೀರಾವರಿಯನ್ನು ಅನುಮೋದಿಸಿ",
+        approved: "ನೀರಾವರಿ ಅನುಮೋದಿಸಲಾಗಿದೆ.",
+        pumpOn: "ಪಂಪ್ ಆನ್",
+        pumpOff: "ಪಂಪ್ ಆಫ್",
+        soil: "ಮಣ್ಣಿನ ತೇವಾಂಶ",
+        temperature: "ತಾಪಮಾನ",
+        humidity: "ಆರ್ದ್ರತೆ",
+        water: "ನೀರಿನ ಮಟ್ಟ",
+        rain: "ಮಳೆಯ ಸಾಧ್ಯತೆ"
+    },
+
+    Malayalam: {
+        irrigation: "ജലസേചനം ആവശ്യമാണ്. ദയവായി ജലസേചനം അംഗീകരിക്കുക.",
+        irrigationRequired: "ജലസേചനം ആവശ്യമാണ്",
+        rainPostpone:
+            "മഴയ്ക്കുള്ള സാധ്യത 50% അല്ലെങ്കിൽ അതിൽ കൂടുതലാണ്. ജലസേചനം മാറ്റിവയ്ക്കാം.",
+        approve: "ജലസേചനം അംഗീകരിക്കുക",
+        approved: "ജലസേചനം അംഗീകരിച്ചു.",
+        pumpOn: "പമ്പ് ഓൺ",
+        pumpOff: "പമ്പ് ഓഫ്",
+        soil: "മണ്ണിലെ ഈർപ്പം",
+        temperature: "താപനില",
+        humidity: "ഈർപ്പം",
+        water: "ജലനിരപ്പ്",
+        rain: "മഴ സാധ്യത"
+    },
+
+    Bengali: {
+        irrigation: "সেচ প্রয়োজন। অনুগ্রহ করে সেচ অনুমোদন করুন।",
+        irrigationRequired: "সেচ প্রয়োজন",
+        rainPostpone:
+            "বৃষ্টির সম্ভাবনা ৫০% বা তার বেশি। আপনি সেচ স্থগিত করতে পারেন।",
+        approve: "সেচ অনুমোদন করুন",
+        approved: "সেচ অনুমোদিত হয়েছে।",
+        pumpOn: "পাম্প চালু",
+        pumpOff: "পাম্প বন্ধ",
+        soil: "মাটির আর্দ্রতা",
+        temperature: "তাপমাত্রা",
+        humidity: "আর্দ্রতা",
+        water: "জলের স্তর",
+        rain: "বৃষ্টির সম্ভাবনা"
+    },
+
+    Marathi: {
+        irrigation: "सिंचन आवश्यक आहे. कृपया सिंचनाला मंजुरी द्या.",
+        irrigationRequired: "सिंचन आवश्यक आहे",
+        rainPostpone:
+            "पावसाची शक्यता 50% किंवा त्यापेक्षा जास्त आहे. तुम्ही सिंचन पुढे ढकलू शकता.",
+        approve: "सिंचनाला मंजुरी द्या",
+        approved: "सिंचनाला मंजुरी देण्यात आली.",
+        pumpOn: "पंप सुरू",
+        pumpOff: "पंप बंद",
+        soil: "मातीतील ओलावा",
+        temperature: "तापमान",
+        humidity: "आर्द्रता",
+        water: "पाण्याची पातळी",
+        rain: "पावसाची शक्यता"
+    },
+
+    Gujarati: {
+        irrigation: "સિંચાઈ જરૂરી છે. કૃપા કરીને સિંચાઈને મંજૂરી આપો.",
+        irrigationRequired: "સિંચાઈ જરૂરી છે",
+        rainPostpone:
+            "વરસાદની સંભાવના 50% અથવા વધુ છે. તમે સિંચાઈ મુલતવી રાખી શકો છો.",
+        approve: "સિંચાઈને મંજૂરી આપો",
+        approved: "સિંચાઈને મંજૂરી આપવામાં આવી.",
+        pumpOn: "પંપ ચાલુ",
+        pumpOff: "પંપ બંધ",
+        soil: "માટીની ભેજ",
+        temperature: "તાપમાન",
+        humidity: "ભેજ",
+        water: "પાણીનું સ્તર",
+        rain: "વરસાદની સંભાવના"
+    },
+
+    Punjabi: {
+        irrigation: "ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਸਿੰਚਾਈ ਨੂੰ ਮਨਜ਼ੂਰੀ ਦਿਓ।",
+        irrigationRequired: "ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਹੈ",
+        rainPostpone:
+            "ਮੀਂਹ ਦੀ ਸੰਭਾਵਨਾ 50% ਜਾਂ ਇਸ ਤੋਂ ਵੱਧ ਹੈ। ਤੁਸੀਂ ਸਿੰਚਾਈ ਮੁਲਤਵੀ ਕਰ ਸਕਦੇ ਹੋ।",
+        approve: "ਸਿੰਚਾਈ ਨੂੰ ਮਨਜ਼ੂਰੀ ਦਿਓ",
+        approved: "ਸਿੰਚਾਈ ਨੂੰ ਮਨਜ਼ੂਰੀ ਦਿੱਤੀ ਗਈ।",
+        pumpOn: "ਪੰਪ ਚਾਲੂ",
+        pumpOff: "ਪੰਪ ਬੰਦ",
+        soil: "ਮਿੱਟੀ ਦੀ ਨਮੀ",
+        temperature: "ਤਾਪਮਾਨ",
+        humidity: "ਨਮੀ",
+        water: "ਪਾਣੀ ਦਾ ਪੱਧਰ",
+        rain: "ਮੀਂਹ ਦੀ ਸੰਭਾਵਨਾ"
+    },
+
+    Odia: {
+        irrigation: "ଜଳସେଚନ ଆବଶ୍ୟକ। ଦୟାକରି ଜଳସେଚନକୁ ଅନୁମୋଦନ କରନ୍ତୁ।",
+        irrigationRequired: "ଜଳସେଚନ ଆବଶ୍ୟକ",
+        rainPostpone:
+            "ବର୍ଷାର ସମ୍ଭାବନା 50% କିମ୍ବା ଅଧିକ। ଆପଣ ଜଳସେଚନକୁ ସ୍ଥଗିତ କରିପାରିବେ।",
+        approve: "ଜଳସେଚନ ଅନୁମୋଦନ କରନ୍ତୁ",
+        approved: "ଜଳସେଚନ ଅନୁମୋଦିତ ହୋଇଛି।",
+        pumpOn: "ପମ୍ପ ଚାଲୁ",
+        pumpOff: "ପମ୍ପ ବନ୍ଦ",
+        soil: "ମାଟିର ଆର୍ଦ୍ରତା",
+        temperature: "ତାପମାତ୍ରା",
+        humidity: "ଆର୍ଦ୍ରତା",
+        water: "ଜଳ ସ୍ତର",
+        rain: "ବର୍ଷା ସମ୍ଭାବନା"
+    },
+
+    Assamese: {
+        irrigation: "জলসিঞ্চনৰ প্ৰয়োজন। অনুগ্ৰহ কৰি জলসিঞ্চন অনুমোদন কৰক।",
+        irrigationRequired: "জলসিঞ্চনৰ প্ৰয়োজন",
+        rainPostpone:
+            "বৰষুণৰ সম্ভাৱনা ৫০% বা তাতকৈ অধিক। আপুনি জলসিঞ্চন স্থগিত কৰিব পাৰে।",
+        approve: "জলসিঞ্চন অনুমোদন কৰক",
+        approved: "জলসিঞ্চন অনুমোদিত হৈছে।",
+        pumpOn: "পাম্প চালু",
+        pumpOff: "পাম্প বন্ধ",
+        soil: "মাটিৰ আৰ্দ্ৰতা",
+        temperature: "উষ্ণতা",
+        humidity: "আৰ্দ্ৰতা",
+        water: "পানীৰ স্তৰ",
+        rain: "বৰষুণৰ সম্ভাৱনা"
+    },
+
+    Urdu: {
+        irrigation: "آبپاشی کی ضرورت ہے۔ براہ کرم آبپاشی کی منظوری دیں۔",
+        irrigationRequired: "آبپاشی ضروری ہے",
+        rainPostpone:
+            "بارش کا امکان 50 فیصد یا اس سے زیادہ ہے۔ آپ آبپاشی ملتوی کر سکتے ہیں۔",
+        approve: "آبپاشی کی منظوری دیں",
+        approved: "آبپاشی کی منظوری دے دی گئی ہے۔",
+        pumpOn: "پمپ آن",
+        pumpOff: "پمپ آف",
+        soil: "مٹی کی نمی",
+        temperature: "درجہ حرارت",
+        humidity: "نمی",
+        water: "پانی کی سطح",
+        rain: "بارش کا امکان"
+    }
+};
+
+
+/*
+=========================================================
+LANGUAGE CODE
+=========================================================
+*/
+
+const languageCodes = {
+    English: "en",
+    Hindi: "hi",
+    Tamil: "ta",
+    Telugu: "te",
+    Kannada: "kn",
+    Malayalam: "ml",
+    Bengali: "bn",
+    Marathi: "mr",
+    Gujarati: "gu",
+    Punjabi: "pa",
+    Odia: "or",
+    Assamese: "as",
+    Urdu: "ur"
+};
+
+
+/*
+=========================================================
+LOAD LANGUAGE DATA
+=========================================================
+*/
+
+fetch("languageData.json")
+    .then(response => response.json())
+    .then(data => {
+
+        languageData = data;
+
+        Object.entries(languageData).forEach(
+            ([state, info]) => {
+
+                if (!info.latitude || !info.longitude) {
+                    return;
+                }
+
+                const marker =
+                    L.marker([
+                        info.latitude,
+                        info.longitude
+                    ]).addTo(map);
+
+                marker.bindPopup(
+                    `<b>${state}</b><br>
+                     Click to view languages`
+                );
+
+                marker.on("click", () => {
+                    showState(state);
+                });
+            }
+        );
+    })
+    .catch(error => {
+        console.error(
+            "Could not load languageData.json:",
+            error
+        );
+    });
+
+
+/*
+=========================================================
+SHOW STATE
+=========================================================
+*/
+
+function showState(state) {
+
+    selectedState = state;
+
+    const info = languageData[state];
+
+    if (!info) {
+        return;
     }
 
+    let languages =
+        [...info.languages]
+        .sort((a, b) => b.speakers - a.speakers)
+        .slice(0, 5);
 
-    // =====================================================
-    // MAP
-    // =====================================================
+    /*
+    English must ALWAYS be the 6th option.
+    */
 
-    const map = L.map("map").setView(
-        [22.5, 80],
-        5
+    languages.push({
+        name: "English",
+        speakers: null
+    });
+
+    document.getElementById("stateInfo").innerHTML = `
+        <h3>${state}</h3>
+        <p>Select one of the top 5 languages or English.</p>
+    `;
+
+    const list =
+        document.getElementById("languageList");
+
+    list.innerHTML = "";
+
+    languages.forEach((language, index) => {
+
+        const button =
+            document.createElement("button");
+
+        button.className =
+            "language-button";
+
+        if (language.name === selectedLanguage) {
+            button.classList.add("selected");
+        }
+
+        let text =
+            `${index + 1}. ${language.name}`;
+
+        if (language.speakers !== null) {
+            text +=
+                ` (${Number(language.speakers).toLocaleString()} speakers)`;
+        }
+
+        button.innerText = text;
+
+        button.onclick = () => {
+
+            selectLanguage(
+                state,
+                language.name
+            );
+
+        };
+
+        list.appendChild(button);
+    });
+
+    document
+        .getElementById("languagePanel")
+        .classList.remove("hidden");
+
+    map.setView(
+        [info.latitude, info.longitude],
+        7
     );
 
+    updateDashboard();
+}
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution:
-                "&copy; OpenStreetMap contributors"
-        }
-    ).addTo(map);
 
+/*
+=========================================================
+SELECT LANGUAGE
+=========================================================
+*/
 
-    // =====================================================
-    // VARIABLES
-    // =====================================================
+async function selectLanguage(
+    state,
+    language
+) {
 
-    let languageData = {};
+    selectedState = state;
+    selectedLanguage = language;
 
-    let selectedState = null;
+    localStorage.setItem(
+        "selectedState",
+        state
+    );
 
-    let selectedLanguage = "English";
+    localStorage.setItem(
+        "selectedLanguage",
+        language
+    );
 
+    showState(state);
 
-    // =====================================================
-    // IRRIGATION MESSAGES
-    // =====================================================
+    if (!BACKEND_URL || !chatId) {
 
-    const irrigationMessages = {
+        document.getElementById("status").innerText =
+            "Language selected: " + language;
 
-        English:
-            "Irrigation is needed. Please approve irrigation.",
-
-        Hindi:
-            "सिंचाई की आवश्यकता है। कृपया सिंचाई की अनुमति दें।",
-
-        Tamil:
-            "பாசனம் தேவைப்படுகிறது. தயவுசெய்து பாசனத்தை அனுமதிக்கவும்.",
-
-        Telugu:
-            "నీటిపారుదల అవసరం ఉంది. దయచేసి నీటిపారుదలను ఆమోదించండి.",
-
-        Kannada:
-            "ನೀರಾವರಿ ಅಗತ್ಯವಿದೆ. ದಯವಿಟ್ಟು ನೀರಾವರಿಯನ್ನು ಅನುಮೋದಿಸಿ.",
-
-        Malayalam:
-            "ജലസേചനം ആവശ്യമാണ്. ദയവായി ജലസേചനം അംഗീകരിക്കുക.",
-
-        Urdu:
-            "آبپاشی کی ضرورت ہے۔ براہ کرم آبپاشی کی منظوری دیں۔",
-
-        Bengali:
-            "সেচের প্রয়োজন রয়েছে। দয়া করে সেচের অনুমতি দিন।",
-
-        Marathi:
-            "सिंचनाची गरज आहे. कृपया सिंचनास मंजुरी द्या।",
-
-        Gujarati:
-            "સિંચાઈની જરૂર છે. કૃપા કરીને સિંચાઈને મંજૂરી આપો.",
-
-        Punjabi:
-            "ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਸਿੰਚਾਈ ਨੂੰ ਮਨਜ਼ੂਰੀ ਦਿਓ।",
-
-        Odia:
-            "ଜଳସେଚନ ଆବଶ୍ୟକ। ଦୟାକରି ଜଳସେଚନକୁ ଅନୁମୋଦନ କରନ୍ତୁ।",
-
-        Assamese:
-            "জলসিঞ্চনৰ প্ৰয়োজন আছে। অনুগ্ৰহ কৰি জলসিঞ্চনৰ অনুমতি দিয়ক।"
-
-    };
-
-
-    // =====================================================
-    // TEXT-TO-SPEECH LANGUAGE CODES
-    // =====================================================
-
-    const languageCodes = {
-
-        English: "en-IN",
-
-        Hindi: "hi-IN",
-
-        Tamil: "ta-IN",
-
-        Telugu: "te-IN",
-
-        Kannada: "kn-IN",
-
-        Malayalam: "ml-IN",
-
-        Urdu: "ur-IN",
-
-        Bengali: "bn-IN",
-
-        Marathi: "mr-IN",
-
-        Gujarati: "gu-IN",
-
-        Punjabi: "pa-IN",
-
-        Odia: "or-IN",
-
-        Assamese: "as-IN"
-
-    };
-
-
-    // =====================================================
-    // LOAD JSON
-    // =====================================================
-
-    fetch("languageData.json")
-
-        .then(response => {
-
-            if (!response.ok) {
-
-                throw new Error(
-                    "languageData.json could not be loaded"
-                );
-
-            }
-
-            return response.json();
-
-        })
-
-        .then(data => {
-
-            languageData = data;
-
-            createStateMarkers();
-
-            openStateFromURL();
-
-        })
-
-        .catch(error => {
-
-            console.error(error);
-
-            document.getElementById(
-                "stateInfo"
-            ).innerHTML = `
-
-                <p style="color:red;">
-                    Error loading languageData.json
-                </p>
-
-            `;
-
-        });
-
-
-    // =====================================================
-    // CREATE STATE MARKERS
-    // =====================================================
-
-    function createStateMarkers() {
-
-        Object.keys(languageData).forEach(state => {
-
-            const data = languageData[state];
-
-            if (
-                data.latitude === undefined ||
-                data.longitude === undefined
-            ) {
-
-                return;
-
-            }
-
-            const marker = L.marker([
-                data.latitude,
-                data.longitude
-            ]).addTo(map);
-
-            marker.bindTooltip(state);
-
-            marker.on("click", function() {
-
-                showState(state);
-
-            });
-
-        });
-
+        return;
     }
 
-
-    // =====================================================
-    // SHOW STATE
-    // =====================================================
-
-    function showState(state) {
-
-        selectedState = state;
-
-        const data = languageData[state];
-
-        if (!data) {
-            return;
-        }
-
-
-        // =================================================
-        // FIND TOP 5 LANGUAGES
-        // =================================================
-
-        const topLanguages =
-            [...data.languages]
-            .sort((a, b) => {
-
-                return getSpeakerCount(b)
-                     - getSpeakerCount(a);
-
-            })
-            .slice(0, 5);
-
-
-        // =================================================
-        // DEFAULT LANGUAGE
-        // =================================================
-
-        // First Top-5 language is selected initially.
-        // English is option number 6.
-
-        if (topLanguages.length > 0) {
-
-            selectedLanguage =
-                getLanguageName(topLanguages[0]);
-
-        } else {
-
-            selectedLanguage = "English";
-
-        }
-
-
-        // =================================================
-        // BUILD HTML
-        // =================================================
-
-        let html = `
-
-            <div class="state-name">
-                ${escapeHTML(state)}
-            </div>
-
-
-            <div class="coordinates">
-
-                Latitude:
-                ${data.latitude}
-
-                <br>
-
-                Longitude:
-                ${data.longitude}
-
-            </div>
-
-
-            <h3 class="section-title">
-                🗣️ Top 5 Languages
-            </h3>
-
-        `;
-
-
-        // =================================================
-        // TOP 5 LANGUAGE BUTTONS
-        // =================================================
-
-        topLanguages.forEach((item, index) => {
-
-            const language =
-                getLanguageName(item);
-
-            const speakers =
-                getSpeakerCount(item);
-
-
-            const isSelected =
-                index === 0;
-
-
-            html += `
-
-                <button
-                    class="language-button ${
-                        isSelected ? "selected" : ""
-                    }"
-                    data-language="${escapeHTML(language)}"
-                    onclick="selectLanguageFromButton(this)"
-                >
-
-                    <strong>
-                        ${index + 1}.
-                        ${escapeHTML(language)}
-                    </strong>
-
-                    <span class="speaker-count">
-
-                        ${formatNumber(speakers)}
-
-                    </span>
-
-                </button>
-
-            `;
-
-        });
-
-
-        // =================================================
-        // ENGLISH AS 6TH OPTION
-        // =================================================
-
-        html += `
-
-            <button
-                id="englishButton"
-                class="language-button english-button"
-                onclick="selectLanguage('English')"
-            >
-
-                <strong>
-                    6. 🇬🇧 English
-                </strong>
-
-                <span class="english-label">
-                    (English)
-                </span>
-
-            </button>
-
-        `;
-
-
-        // =================================================
-        // SELECTED LANGUAGE
-        // =================================================
-
-        html += `
-
-            <div class="selected-language">
-
-                Selected language:
-
-                <strong id="selectedLanguageText">
-
-                    ${escapeHTML(selectedLanguage)}
-
-                </strong>
-
-            </div>
-
-        `;
-
-
-        // =================================================
-        // IRRIGATION ALERT
-        // =================================================
-
-        html += `
-
-            <div class="alert-box">
-
-                <h3>
-                    🚜 Irrigation Alert
-                </h3>
-
-                <p id="alertMessage">
-
-                    ${getMessage(selectedLanguage)}
-
-                </p>
-
-
-                <div class="voice-buttons">
-
-                    <button
-                        class="voice-button listen"
-                        onclick="speakAlert()"
-                    >
-
-                        🔊 Listen
-
-                    </button>
-
-
-                    <button
-                        class="voice-button stop"
-                        onclick="stopSpeech()"
-                    >
-
-                        ⏹ Stop
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        `;
-
-
-        // =================================================
-        // INSTRUCTIONS
-        // =================================================
-
-        html += `
-
-            <div class="instruction">
-
-                <strong>
-                    How it works:
-                </strong>
-
-                <br><br>
-
-                1. The state's Top 5 languages
-                are shown first.
-
-                <br>
-
-                2. English is always the
-                6th option.
-
-                <br>
-
-                3. Select any one language.
-
-                <br>
-
-                4. The irrigation message
-                changes to that language.
-
-                <br>
-
-                5. Press 🔊 Listen to hear
-                the selected language.
-
-            </div>
-
-        `;
-
-
-        document.getElementById(
-            "stateInfo"
-        ).innerHTML = html;
-
-
-        // =================================================
-        // MOVE MAP
-        // =================================================
-
-        map.setView(
-            [
-                data.latitude,
-                data.longitude
-            ],
-            7
-        );
-
-    }
-
-
-    // =====================================================
-    // SELECT LANGUAGE FROM TOP 5 BUTTON
-    // =====================================================
-
-    function selectLanguageFromButton(button) {
-
-        const language =
-            button.getAttribute(
-                "data-language"
-            );
-
-        selectLanguage(language);
-
-    }
-
-
-    // =====================================================
-    // SELECT LANGUAGE
-    // =====================================================
-
-    function selectLanguage(language) {
-
-        selectedLanguage = language;
-
-
-        // Remove old selection
-
-        document
-            .querySelectorAll(
-                ".language-button"
-            )
-            .forEach(button => {
-
-                button.classList.remove(
-                    "selected"
-                );
-
-            });
-
-
-        // Find selected button
-
-        document
-            .querySelectorAll(
-                ".language-button"
-            )
-            .forEach(button => {
-
-                const buttonLanguage =
-                    button.getAttribute(
-                        "data-language"
-                    );
-
-
-                if (
-                    buttonLanguage === language
-                ) {
-
-                    button.classList.add(
-                        "selected"
-                    );
-
+    try {
+
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/select`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        state: state,
+                        language: language
+                    })
                 }
-
-            });
-
-
-        // English button
-
-        if (language === "English") {
-
-            const englishButton =
-                document.getElementById(
-                    "englishButton"
-                );
-
-
-            if (englishButton) {
-
-                englishButton.classList.add(
-                    "selected"
-                );
-
-            }
-
-        }
-
-
-        // Update selected language
-
-        const selectedText =
-            document.getElementById(
-                "selectedLanguageText"
             );
 
+        const result =
+            await response.json();
 
-        if (selectedText) {
+        document.getElementById("status").innerText =
+            result.message ||
+            "Language selected successfully.";
 
-            selectedText.textContent =
-                language;
+        updateDashboard();
 
-        }
+    } catch (error) {
 
+        console.error(error);
 
-        // Update irrigation message
-
-        const alertMessage =
-            document.getElementById(
-                "alertMessage"
-            );
+        document.getElementById("status").innerText =
+            "Could not connect to SmartAgriMap server.";
+    }
+}
 
 
-        if (alertMessage) {
+/*
+=========================================================
+DASHBOARD
+=========================================================
+*/
 
-            alertMessage.textContent =
-                getMessage(language);
+async function updateDashboard() {
 
-        }
-
+    if (!BACKEND_URL || !chatId) {
+        return;
     }
 
+    try {
 
-    // =====================================================
-    // GET IRRIGATION MESSAGE
-    // =====================================================
-
-    function getMessage(language) {
-
-        return (
-            irrigationMessages[language] ||
-            irrigationMessages["English"]
-        );
-
-    }
-
-
-    // =====================================================
-    // TEXT TO SPEECH
-    // =====================================================
-
-    function speakAlert() {
-
-        const language =
-            selectedLanguage || "English";
-
-
-        const message =
-            getMessage(language);
-
-
-        const languageCode =
-            languageCodes[language];
-
-
-        if (!languageCode) {
-
-            alert(
-                "Audio for " +
-                language +
-                " has not been configured yet."
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/dashboard?chat_id=${encodeURIComponent(chatId)}`
             );
 
+        const data =
+            await response.json();
+
+        if (!data.success) {
             return;
-
         }
 
+        const sensor =
+            data.sensor;
 
-        // Stop previous audio
+        document.getElementById("soil").innerText =
+            sensor.soil_moisture ?? "--";
 
-        window.speechSynthesis.cancel();
+        document.getElementById("temperature").innerText =
+            sensor.temperature ?? "--";
 
+        document.getElementById("humidity").innerText =
+            sensor.humidity ?? "--";
 
-        let voices =
-            window.speechSynthesis.getVoices();
+        document.getElementById("water").innerText =
+            sensor.water_level ?? "--";
 
+        document.getElementById("pump").innerText =
+            sensor.pump ? "ON" : "OFF";
 
-        // Exact language match
+        document.getElementById("rain").innerText =
+            data.rain_probability ?? "--";
 
-        let voice =
-            voices.find(v =>
+        updateAlert(data);
 
-                v.lang.toLowerCase() ===
-                languageCode.toLowerCase()
+    } catch (error) {
 
-            );
-
-
-        // Same language match
-
-        if (!voice) {
-
-            const shortCode =
-                languageCode
-                    .split("-")[0]
-                    .toLowerCase();
-
-
-            voice =
-                voices.find(v =>
-
-                    v.lang
-                        .toLowerCase()
-                        .startsWith(shortCode)
-
-                );
-
-        }
-
-
-        // Do not silently speak another language
-
-        if (
-            language !== "English" &&
-            !voice
-        ) {
-
-            alert(
-
-                "A " +
-                language +
-                " voice is not available on this device.\n\n" +
-
-                "Please install the " +
-                language +
-                " Text-to-Speech voice on your phone."
-
-            );
-
-            return;
-
-        }
-
-
-        const speech =
-            new SpeechSynthesisUtterance(
-                message
-            );
-
-
-        if (voice) {
-
-            speech.voice =
-                voice;
-
-            speech.lang =
-                voice.lang;
-
-        }
-        else {
-
-            speech.lang =
-                "en-IN";
-
-        }
-
-
-        speech.rate = 0.9;
-
-        speech.pitch = 1;
-
-
-        window.speechSynthesis.speak(
-            speech
+        console.error(
+            "Dashboard error:",
+            error
         );
+    }
+}
 
+
+/*
+=========================================================
+ALERT
+=========================================================
+*/
+
+function updateAlert(data) {
+
+    const box =
+        document.getElementById("alertBox");
+
+    const approve =
+        document.getElementById("approveButton");
+
+    const t =
+        translations[selectedLanguage] ||
+        translations["English"];
+
+    box.innerHTML = "";
+
+    /*
+    Soil moisture below 70%
+    */
+
+    if (
+        data.sensor &&
+        Number(data.sensor.soil_moisture) < 70
+    ) {
+
+        const irrigation =
+            document.createElement("div");
+
+        irrigation.className =
+            "irrigation";
+
+        irrigation.innerText =
+            t.irrigation;
+
+        box.appendChild(irrigation);
+
+        approve.innerText =
+            t.approve;
+
+        approve.classList.remove("hidden");
+
+    } else {
+
+        approve.classList.add("hidden");
+
+        const success =
+            document.createElement("div");
+
+        success.className =
+            "success";
+
+        success.innerText =
+            "Soil moisture is sufficient.";
+
+        box.appendChild(success);
     }
 
+    /*
+    Rain >= 50%
+    */
 
-    // =====================================================
-    // STOP SPEECH
-    // =====================================================
+    if (
+        data.rain_probability !== null &&
+        Number(data.rain_probability) >= 50
+    ) {
 
-    function stopSpeech() {
+        const rain =
+            document.createElement("div");
 
-        window.speechSynthesis.cancel();
+        rain.className =
+            "alert";
 
+        rain.innerText =
+            t.rainPostpone;
+
+        box.appendChild(rain);
+    }
+}
+
+
+/*
+=========================================================
+APPROVE IRRIGATION
+=========================================================
+*/
+
+async function approveIrrigation() {
+
+    if (!BACKEND_URL || !chatId) {
+
+        document.getElementById("status").innerText =
+            "Backend connection is not configured.";
+
+        return;
     }
 
+    try {
 
-    // =====================================================
-    // GET LANGUAGE NAME
-    // =====================================================
-
-    function getLanguageName(item) {
-
-        if (
-            typeof item === "string"
-        ) {
-
-            return item;
-
-        }
-
-
-        return (
-
-            item.language ||
-            item.name ||
-            item.Language ||
-            "Unknown"
-
-        );
-
-    }
-
-
-    // =====================================================
-    // GET SPEAKER COUNT
-    // =====================================================
-
-    function getSpeakerCount(item) {
-
-        if (
-            typeof item === "string"
-        ) {
-
-            return 0;
-
-        }
-
-
-        const values = [
-
-            item.speakers,
-
-            item.Speakers,
-
-            item.speaker_count,
-
-            item["Speaker Count"],
-
-            item.count,
-
-            item.Count
-
-        ];
-
-
-        for (
-            const value of values
-        ) {
-
-            if (
-                value !== undefined &&
-                value !== null
-            ) {
-
-                const number =
-                    Number(
-                        String(value)
-                            .replace(/,/g, "")
-                    );
-
-
-                if (!isNaN(number)) {
-
-                    return number;
-
+        const response =
+            await fetch(
+                `${BACKEND_URL}/api/approve`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId
+                    })
                 }
+            );
 
-            }
+        const result =
+            await response.json();
 
-        }
+        document.getElementById("status").innerText =
+            result.message ||
+            "Irrigation command sent.";
 
+        updateDashboard();
 
-        return 0;
+    } catch (error) {
 
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            "Could not send irrigation command.";
     }
+}
 
 
-    // =====================================================
-    // FORMAT NUMBER
-    // =====================================================
+/*
+=========================================================
+LOAD SAVED SELECTION
+=========================================================
+*/
 
-    function formatNumber(number) {
+const savedState =
+    localStorage.getItem("selectedState");
 
-        if (
-            number === undefined ||
-            number === null ||
-            isNaN(number)
-        ) {
+const savedLanguage =
+    localStorage.getItem("selectedLanguage");
 
-            return "N/A";
+if (savedLanguage) {
+    selectedLanguage = savedLanguage;
+}
 
-        }
+if (
+    savedState &&
+    languageData[savedState]
+) {
 
-
-        return Number(number)
-            .toLocaleString("en-IN");
-
-    }
-
-
-    // =====================================================
-    // ESCAPE HTML
-    // =====================================================
-
-    function escapeHTML(text) {
-
-        return String(text)
-
-            .replace(
-                /&/g,
-                "&amp;"
-            )
-
-            .replace(
-                /</g,
-                "&lt;"
-            )
-
-            .replace(
-                />/g,
-                "&gt;"
-            )
-
-            .replace(
-                /"/g,
-                "&quot;"
-            )
-
-            .replace(
-                /'/g,
-                "&#039;"
-            );
-
-    }
+    showState(savedState);
+}
 
 
-    // =====================================================
-    // OPEN STATE / FARMER LOCATION FROM URL
-    // =====================================================
+/*
+=========================================================
+REFRESH SENSOR DATA
+=========================================================
+*/
 
-    function openStateFromURL() {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-
-        const state =
-            params.get("state");
-
-
-        const lat =
-            parseFloat(
-                params.get("lat")
-            );
-
-
-        const lng =
-            parseFloat(
-                params.get("lng")
-            );
-
-
-        // Farmer location
-
-        if (
-            !isNaN(lat) &&
-            !isNaN(lng)
-        ) {
-
-            map.setView(
-                [lat, lng],
-                12
-            );
-
-
-            L.marker([
-                lat,
-                lng
-            ])
-            .addTo(map)
-            .bindPopup(
-                "🚜 Farmer's Location"
-            )
-            .openPopup();
-
-        }
-
-
-        // State
-
-        if (
-            state &&
-            languageData[state]
-        ) {
-
-            showState(state);
-
-        }
-
-    }
+setInterval(
+    updateDashboard,
+    5000
+);
 
 </script>
 
 </body>
-
 </html>
