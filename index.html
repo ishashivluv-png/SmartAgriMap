@@ -213,21 +213,11 @@ const MAP_URL =
 /*
 IMPORTANT:
 
-Replace this with your PUBLIC HTTPS Flask URL.
-
-Example:
-
-const BACKEND_URL =
-    "https://xxxxx.trycloudflare.com";
-
-Do NOT put:
-http://10.222.230.60:5000
-
-That is your private laptop IP and cannot be reached
-from GitHub Pages over the Internet.
+Public HTTPS Flask URL through ngrok.
 */
 
-const BACKEND_URL = "";
+const BACKEND_URL =
+    "https://craftwork-bridged-tarot.ngrok-free.dev";
 
 
 /*
@@ -250,6 +240,8 @@ if (!chatId && window.Telegram && Telegram.WebApp) {
             Telegram.WebApp.initDataUnsafe.user.id;
     }
 }
+
+
 /*
 =========================================================
 MAP
